@@ -1,51 +1,27 @@
-from pymongo import MongoClient, UpdateOne, ASCENDING
-import logging
-from config import MONGO_URI, DB_NAME
+import os
+from pymongo import MongoClient, UpdateOne
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+load_dotenv()
 
-class MongoDBConnector:
-    def __init__(self, uri: str = MONGO_URI, db_name: str = DB_NAME):
-        self.client = MongoClient(uri)
-        self.db = self.client[db_name]
-        self._setup_indexes()
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "vietnam_stocks")
 
-    def _setup_indexes(self):
-        """Khởi tạo Unique Index để chống trùng lặp dữ liệu BCTC."""
-        collections = ["income_statement", "balance_sheet", "cash_flow"]
-        index_keys = [
-            ("symbol", ASCENDING),
-            ("period", ASCENDING),
-            ("year", ASCENDING),
-            ("quarter", ASCENDING)
-        ]
+class MongoDB:
+    def __init__(self):
+        self.client = MongoClient(MONGO_URI)
+        self.db = self.client[DB_NAME]
         
-        for coll_name in collections:
-            self.db[coll_name].create_index(
-                index_keys, 
-                unique=True, 
-                name="idx_symbol_period_year_quarter"
-            )
-
-    def bulk_upsert(self, collection_name: str, records: list) -> int:
-        """Thực hiện bulk write upsert để ghi nhận nhiều bản ghi cùng lúc."""
+    def bulk_upsert(self, collection_name, records, match_keys):
+        """Lưu dữ liệu mới, nếu đã có (dựa trên match_keys) thì cập nhật"""
         if not records:
             return 0
-
+        
         operations = []
         for record in records:
-            filter_doc = {
-                "symbol": record["symbol"],
-                "period": record["period"],
-                "year": record["year"],
-                "quarter": record["quarter"]
-            }
-            operations.append(
-                UpdateOne(filter_doc, {"$set": record}, upsert=True)
-            )
-
+            # Tạo bộ lọc để tìm xem record đã tồn tại chưa
+            filter_doc = {k: record.get(k) for k in match_keys}
+            operations.append(UpdateOne(filter_doc, {"$set": record}, upsert=True))
+            
         result = self.db[collection_name].bulk_write(operations, ordered=False)
         return result.upserted_count + result.modified_count
-
-    def close(self):
-        self.client.close()
