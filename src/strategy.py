@@ -1,6 +1,7 @@
 import re
 import logging
 from datetime import datetime
+<<<<<<< HEAD
 from db import MongoDBConnector
 
 import certifi
@@ -28,6 +29,17 @@ def run_strategy():
     
     #Lấy toàn bộ bản ghi Lợi nhuận sau thuế từ collection income_statement
     docs = list(db.db["income_statement"].find({"item_id": "net_profit"}))
+=======
+from db import MongoDB
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+def run_strategy():
+    db = MongoDB()
+    
+    #Lấy toàn bộ bản ghi Lợi nhuận sau thuế từ collection income_statement
+    docs = list(db.db["income_statement"].find({"item_id": "profit_after_tax"}))
+>>>>>>> bf81072c40a17ce43a939220ed85be8cf887dc26
     results = []
     
     logging.info("--- ĐANG CHẠY LOGIC PHÂN TÍCH (LNST 3 Quý > 0) ---")

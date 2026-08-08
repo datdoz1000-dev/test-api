@@ -6,7 +6,11 @@ from db import MongoDBConnector
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 # Danh sách mã 
+<<<<<<< HEAD
 SYMBOLS = ["HPG", "VCB", "FPT"]
+=======
+SYMBOLS = ["HPG","VCB", "FPT"]
+>>>>>>> bf81072c40a17ce43a939220ed85be8cf887dc26
 
 def crawl_profit_data():
     db = MongoDBConnector()
@@ -53,8 +57,12 @@ def crawl_profit_data():
             records = df_pivoted.to_dict(orient="records")
             
             # Lưu vào bảng income_statement
+<<<<<<< HEAD
             # match_keys bây giờ phải sử dụng bộ khoá chuẩn của index
             db.bulk_upsert("income_statement", records, match_keys=["symbol", "period", "year", "quarter"])
+=======
+            db.bulk_upsert("income_statement", records, match_keys=["symbol", "item_id"])
+>>>>>>> bf81072c40a17ce43a939220ed85be8cf887dc26
             logging.info(f"Đã lưu thành công LNST của {symbol}")
             
         except Exception as e:
