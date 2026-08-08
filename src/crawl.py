@@ -4,7 +4,7 @@ from db import MongoDB
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
-# Danh sách mã bạn muốn theo dõi (có thể thêm bớt tùy ý)
+# Danh sách mã 
 SYMBOLS = ["HPG","VCB", "FPT"]
 
 def crawl_profit_data():
@@ -31,7 +31,7 @@ def crawl_profit_data():
             
             # Lưu vào bảng income_statement
             db.bulk_upsert("income_statement", records, match_keys=["symbol", "item_id"])
-            logging.info(f"✅ Đã lưu thành công LNST của {symbol}")
+            logging.info(f"Đã lưu thành công LNST của {symbol}")
             
         except Exception as e:
             logging.error(f"Lỗi khi cào mã {symbol}: {e}")
