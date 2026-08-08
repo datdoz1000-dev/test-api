@@ -14,7 +14,7 @@ def run_strategy():
     
     logging.info("1. Đang truy vấn dữ liệu 'Lợi nhuận sau thuế' từ MongoDB...")
     
-    # Tìm các document chứa Lợi nhuận sau thuế (Sử dụng Regex để bắt cả trường hợp ghi hoa/thường)
+    # Tìm các document chứa Lợi nhuận sau thuế
     query = {
         "$or": [
             {"item_id": "profit_after_tax"},
@@ -33,10 +33,10 @@ def run_strategy():
     for doc in docs:
         symbol = doc.get("symbol", "UNKNOWN")
         
-        # Trích xuất các cột chứa chu kỳ thời gian (VD: 2024-Q1, 2024-Q2,...)
+        # Trích xuất các cột chứa chu kỳ thời gian 
         quarter_keys = [key for key in doc.keys() if re.match(r"^\d{4}-Q\d$", key)]
         
-        # Sắp xếp theo bảng chữ cái cũng chính là sắp xếp theo thời gian tăng dần
+        # Sắp xếp theo bảng chữ cái 
         quarter_keys.sort()
         
         # Bỏ qua nếu mã này chưa đủ dữ liệu của 3 quý
@@ -47,13 +47,13 @@ def run_strategy():
         last_3_quarters = quarter_keys[-3:]
         profits = [doc.get(q, 0) for q in last_3_quarters]
         
-        # Logic: Tất cả 3 quý đều phải có LNST > 0
+        # Tất cả 3 quý đều phải có LNST > 0
         try:
             is_good = all(float(p) > 0 for p in profits if p is not None)
         except (ValueError, TypeError):
             is_good = False
             
-        # Đóng gói kết quả
+        # Đóng gói result
         results.append({
             "symbol": symbol,
             "q_minus_2_name": last_3_quarters[0],
