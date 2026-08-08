@@ -1,81 +1,64 @@
 import re
 import logging
-import pandas as pd
-from pymongo import MongoClient
+from datetime import datetime
+from db import MongoDB
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
-
-MONGO_URI = "mongodb+srv://datdoz1000_db_user:KHz1rR1oMBNPixPY@testapi.rq4cv6g.mongodb.net/?"
-DB_NAME = "vietnam_stocks"
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 def run_strategy():
-    client = MongoClient(MONGO_URI)
-    db = client[DB_NAME]
+    db = MongoDB()
     
-    logging.info("1. Đang truy vấn dữ liệu 'Lợi nhuận sau thuế' từ MongoDB...")
-    
-    # Tìm các document chứa Lợi nhuận sau thuế
-    query = {
-        "$or": [
-            {"item_id": "profit_after_tax"},
-            {"item": {"$regex": "lợi nhuận sau thuế", "$options": "i"}}
-        ]
-    }
-    docs = list(db["income_statement"].find(query))
-    
-    if not docs:
-        logging.warning("Không tìm thấy dữ liệu 'Lợi nhuận sau thuế'. Hãy chắc chắn bạn đã cào dữ liệu.")
-        return
-
+    #Lấy toàn bộ bản ghi Lợi nhuận sau thuế từ collection income_statement
+    docs = list(db.db["income_statement"].find({"item_id": "profit_after_tax"}))
     results = []
     
-    logging.info("2. Đang áp dụng logic: 3 Quý gần nhất LNST > 0...")
+    logging.info("--- ĐANG CHẠY LOGIC PHÂN TÍCH (LNST 3 Quý > 0) ---")
+    
     for doc in docs:
-        symbol = doc.get("symbol", "UNKNOWN")
+        symbol = doc.get("symbol")
         
-        # Trích xuất các cột chứa chu kỳ thời gian 
-        quarter_keys = [key for key in doc.keys() if re.match(r"^\d{4}-Q\d$", key)]
+        # Tìm các cột dữ liệu theo quý 
+        quarter_keys = [k for k in doc.keys() if re.match(r"^\d{4}-Q\d$", str(k))]
+        quarter_keys.sort() # Sắp xếp tăng dần theo thời gian
         
-        # Sắp xếp theo bảng chữ cái 
-        quarter_keys.sort()
-        
-        # Bỏ qua nếu mã này chưa đủ dữ liệu của 3 quý
         if len(quarter_keys) < 3:
+            logging.warning(f"Mã {symbol} chưa đủ dữ liệu 3 quý. Bỏ qua.")
             continue
             
-        # Lấy 3 quý gần nhất
+        # Trích xuất 3 quý gần nhất
         last_3_quarters = quarter_keys[-3:]
-        profits = [doc.get(q, 0) for q in last_3_quarters]
         
-        # Tất cả 3 quý đều phải có LNST > 0
         try:
-            is_good = all(float(p) > 0 for p in profits if p is not None)
-        except (ValueError, TypeError):
-            is_good = False
+            p1 = float(doc.get(last_3_quarters[0]) or 0)
+            p2 = float(doc.get(last_3_quarters[1]) or 0) 
+            p3 = float(doc.get(last_3_quarters[2]) or 0) 
             
-        # Đóng gói result
-        results.append({
-            "symbol": symbol,
-            "q_minus_2_name": last_3_quarters[0],
-            "q_minus_2_profit": profits[0],
-            "q_minus_1_name": last_3_quarters[1],
-            "q_minus_1_profit": profits[1],
-            "q_current_name": last_3_quarters[2],
-            "q_current_profit": profits[2],
-            "signal": "BUY" if is_good else "IGNORE",
-            "evaluated_at": pd.Timestamp.now()
-        })
-        
-    logging.info("3. Lưu danh sách tín hiệu vào collection 'signals'...")
+            # Cả 3 quý đều phải có LNST > 0
+            is_buy = (p1 > 0) and (p2 > 0) and (p3 > 0)
+            
+            results.append({
+                "symbol": symbol,
+                "q_minus_2_name": last_3_quarters[0],
+                "q_minus_2_profit": p1,
+                "q_minus_1_name": last_3_quarters[1],
+                "q_minus_1_profit": p2,
+                "q_current_name": last_3_quarters[2],
+                "q_current_profit": p3,
+                "total_3q_profit": p1 + p2 + p3,
+                "signal": "BUY" if is_buy else "IGNORE",
+                "evaluated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+        except Exception as e:
+            logging.error(f"Lỗi tính toán cho {symbol}: {e}")
+            continue
+
+    #Lưu kết quả vào Collection 'signals'
     if results:
-        # Xóa dữ liệu chiến lược cũ trước khi ghi mới để không bị rác
-        db["signals"].delete_many({}) 
-        db["signals"].insert_many(results)
+        db.db["signals"].delete_many({})
+        db.db["signals"].insert_many(results)
         
         buy_count = sum(1 for r in results if r["signal"] == "BUY")
         logging.info(f"Hoàn tất! Phân tích {len(results)} mã. Có {buy_count} mã đạt tiêu chí BUY.")
-    
-    client.close()
 
 if __name__ == "__main__":
     run_strategy()
