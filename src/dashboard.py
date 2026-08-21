@@ -14,9 +14,7 @@ st.set_page_config(page_title="Công cụ Lọc Cổ phiếu", page_icon="📈",
 st.title("📈 Phân Tích Cổ Phiếu Theo Lợi Nhuận")
 st.markdown("Chiến lược: **Lợi nhuận sau thuế 3 quý liên tiếp gần nhất > 0**")
 
-# ==========================================
-# PHẦN 1: TƯƠNG TÁC NHẬP MÃ (TỪ GIAO DIỆN)
-# ==========================================
+#TƯƠNG TÁC NHẬP MÃ (TỪ GIAO DIỆN)
 st.subheader("1. Nhập Mã Doanh Nghiệp")
 symbols_input = st.text_input(
     "Nhập danh sách mã chứng khoán (cách nhau bằng dấu phẩy):", 
@@ -37,7 +35,7 @@ if st.button("🚀 Thực hiện Cào dữ liệu & Phân tích", type="primary"
             crawl_profit_data(symbols) # Gọi file crawl
             
             st.write("Đang chạy chiến lược phân tích...")
-            run_strategy()             # Gọi file strategy
+            run_strategy(symbols)      # Gọi file strategy (Chỉ phân tích các mã vừa nhập)        
             
             status.update(label="Hoàn tất xử lý!", state="complete", expanded=False)
             

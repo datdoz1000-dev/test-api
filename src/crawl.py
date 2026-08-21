@@ -22,7 +22,7 @@ def crawl_profit_data(symbols):
             if 'item_id' in df.columns:
                 df = df.drop_duplicates(subset=['item_id'], keep='first')
                 
-            # Loại bỏ các cột trùng lặp thời gian do KBS sinh ra (vd: 2025-Q4_1)
+            # Loại bỏ các cột trùng lặp thời gian do KBS sinh ra 
             cols_to_keep = [c for c in df.columns if not str(c).endswith('_1') and not str(c).endswith('_2')]
             df = df[cols_to_keep]
                 
@@ -32,7 +32,6 @@ def crawl_profit_data(symbols):
                 continue
                 
             # Chuyển dữ liệu từ ngang (cột là quý) sang dọc (Melt)
-            # Khúc này sẽ biến các cột như '2026-Q1' thành dữ liệu trong cột 'period_str'
             time_cols = [c for c in df.columns if c not in ['item', 'item_id']]
             df_melted = df.melt(id_vars=['item_id'], value_vars=time_cols, var_name='period_str', value_name='value')
             
@@ -50,7 +49,7 @@ def crawl_profit_data(symbols):
             # Đóng gói dữ liệu để lưu
             records = df_pivoted.to_dict(orient="records")
             
-            # match_keys bây giờ phải sử dụng bộ khoá chuẩn của index
+            # match_keys
             db.bulk_upsert("income_statement", records, match_keys=["symbol", "period", "year", "quarter"])
             
             logging.info(f"Đã lưu thành công LNST của {symbol}")
@@ -62,7 +61,7 @@ if __name__ == "__main__":
     print("--- CHƯƠNG TRÌNH CÀO DỮ LIỆU TÀI CHÍNH ---")
     
     # Cho phép người dùng tự nhập mã từ màn hình terminal/console
-    user_input = input("Nhập danh sách mã doanh nghiệp cần cào (cách nhau bằng dấu phẩy, vd: HPG, VCB, FPT): ")
+    user_input = input("Nhập danh sách mã doanh nghiệp cần cào: ")
     
     if user_input.strip():
         # Xử lý chuỗi nhập vào: Tách bằng dấu phẩy, xoá khoảng trắng và in hoa toàn bộ
